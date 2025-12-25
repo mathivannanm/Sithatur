@@ -72,7 +72,7 @@
     .rotate-overlay {
       position: fixed;
       inset: 0;
-      background: black;
+      background: rgba(0,0,0,0.8);
       color: white;
       display: none;
       flex-direction: column;
@@ -84,6 +84,7 @@
 
     .rotate-overlay span {
       font-size: 48px;
+      margin-bottom: 16px;
     }
   </style>
 </head>
@@ -93,8 +94,7 @@
   <!-- ROTATE MESSAGE -->
   <div id="rotateOverlay" class="rotate-overlay">
     <span>📱↻</span>
-    <p>Rotate your phone</p>
-    <p>Tap once to start</p>
+    <p>Rotate your phone for better experience</p>
   </div>
 
   <!-- VIDEO -->
@@ -120,34 +120,12 @@
     const current = document.getElementById("current");
     const duration = document.getElementById("duration");
 
-    let fullscreenAllowed = false;
-
-    /* FULLSCREEN FUNCTION */
-    function enterFullscreen() {
-      if (!document.fullscreenElement) {
-        if (video.requestFullscreen) video.requestFullscreen();
-        else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
-      }
-    }
-
-    function exitFullscreen() {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
-    }
-
     /* ORIENTATION CHECK */
     function checkOrientation() {
       if (window.innerHeight > window.innerWidth) {
-        overlay.style.display = "flex";
-        exitFullscreen();
-        video.pause();
+        overlay.style.display = "flex"; // show message in portrait
       } else {
-        overlay.style.display = "none";
-        if (fullscreenAllowed) {
-          enterFullscreen();
-          video.play();
-        }
+        overlay.style.display = "none"; // hide in landscape
       }
     }
 
@@ -156,9 +134,7 @@
 
     /* FIRST USER TAP */
     document.body.addEventListener("click", () => {
-      fullscreenAllowed = true;
-      video.play();
-      checkOrientation();
+      video.play(); // allow autoplay after user interaction
     }, { once: true });
 
     /* CONTROLS */
@@ -184,7 +160,6 @@
 
     seek.oninput = () => {
       video.currentTime = seek.value;
-      video.play();
     };
 
     function formatTime(sec) {
@@ -193,9 +168,8 @@
       return `${m}:${s}`;
     }
 
-    checkOrientation();
+    checkOrientation(); // initial check
   </script>
 
 </body>
 </html>
-
