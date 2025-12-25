@@ -6,9 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     html, body {
       margin: 0;
@@ -20,15 +18,13 @@
       font-family: system-ui, sans-serif;
     }
 
-    /* VIDEO */
     video {
       width: 100vw;
       height: 100vh;
-      object-fit: contain; /* IMAGE-LIKE BEHAVIOR */
+      object-fit: contain;
       background: black;
     }
 
-    /* BOTTOM CONTROL BAR */
     .bottom-bar {
       position: fixed;
       bottom: env(safe-area-inset-bottom, 8px);
@@ -36,21 +32,17 @@
       transform: translateX(-50%);
       width: calc(100% - 24px);
       max-width: 600px;
-
       display: flex;
       align-items: center;
       gap: 8px;
-
       padding: 8px 10px;
       border-radius: 16px;
       color: white;
-
       backdrop-filter: blur(6px);
       background: rgba(0, 0, 0, 0.45);
       z-index: 10;
     }
 
-    /* BUTTONS */
     .btn {
       background: transparent;
       border: none;
@@ -59,46 +51,61 @@
       cursor: pointer;
     }
 
-    /* TIME TEXT */
     .time {
       font-size: 13px;
       min-width: 42px;
       text-align: center;
     }
 
-    /* SEEK BAR */
     input[type="range"] {
       flex: 1;
-      min-width: 0;  /* IMPORTANT FOR MOBILE */
+      min-width: 0;
       height: 4px;
-      cursor: pointer;
     }
 
-    /* MOBILE ADJUSTMENT */
     @media (max-width: 480px) {
-      .btn {
-        font-size: 20px;
-      }
+      .btn { font-size: 20px; }
+      .time { font-size: 12px; }
+    }
 
-      .time {
-        font-size: 12px;
-      }
+    /* Rotate Message */
+    .rotate-overlay {
+      position: fixed;
+      inset: 0;
+      background: black;
+      color: white;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      text-align: center;
+    }
+
+    .rotate-overlay span {
+      font-size: 48px;
     }
   </style>
 </head>
 
 <body>
 
+  <!-- ROTATE MESSAGE -->
+  <div id="rotateOverlay" class="rotate-overlay">
+    <span>📱↻</span>
+    <p>Rotate your phone</p>
+    <p>Tap once to start</p>
+  </div>
+
   <!-- VIDEO -->
   <video id="video" autoplay muted playsinline preload="auto">
-    <source src="./kovil_video.mp4" type="video/mp4">
+    <source src="./video.mp4" type="video/mp4">
   </video>
 
   <!-- CONTROLS -->
   <div class="bottom-bar">
     <button id="playPauseBtn" class="btn">⏸️</button>
     <button id="muteBtn" class="btn">🔇</button>
-
     <span id="current" class="time">0:00</span>
     <input type="range" id="seek" value="0">
     <span id="duration" class="time">0:00</span>
@@ -106,53 +113,87 @@
 
   <script>
     const video = document.getElementById("video");
+    const overlay = document.getElementById("rotateOverlay");
     const playPauseBtn = document.getElementById("playPauseBtn");
     const muteBtn = document.getElementById("muteBtn");
     const seek = document.getElementById("seek");
     const current = document.getElementById("current");
     const duration = document.getElementById("duration");
 
-    /* PLAY / PAUSE */
-    playPauseBtn.addEventListener("click", () => {
-      if (video.paused) {
-        video.play();
-        playPauseBtn.textContent = "⏸️";
-      } else {
-        video.pause();
-        playPauseBtn.textContent = "▶️";
-      }
-    });
+    let fullscreenAllowed = false;
 
-    /* MUTE */
-    muteBtn.addEventListener("click", () => {
+    /* FULLSCREEN FUNCTION */
+    function enterFullscreen() {
+      if (!document.fullscreenElement) {
+        if (video.requestFullscreen) video.requestFullscreen();
+        else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+      }
+    }
+
+    function exitFullscreen() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+    }
+
+    /* ORIENTATION CHECK */
+    function checkOrientation() {
+      if (window.innerHeight > window.innerWidth) {
+        overlay.style.display = "flex";
+        exitFullscreen();
+        video.pause();
+      } else {
+        overlay.style.display = "none";
+        if (fullscreenAllowed) {
+          enterFullscreen();
+          video.play();
+        }
+      }
+    }
+
+    window.addEventListener("resize", checkOrientation);
+    window.addEventListener("orientationchange", checkOrientation);
+
+    /* FIRST USER TAP */
+    document.body.addEventListener("click", () => {
+      fullscreenAllowed = true;
+      video.play();
+      checkOrientation();
+    }, { once: true });
+
+    /* CONTROLS */
+    playPauseBtn.onclick = () => {
+      video.paused ? video.play() : video.pause();
+      playPauseBtn.textContent = video.paused ? "▶️" : "⏸️";
+    };
+
+    muteBtn.onclick = () => {
       video.muted = !video.muted;
       muteBtn.textContent = video.muted ? "🔇" : "🔊";
-    });
+    };
 
-    /* LOAD META */
-    video.addEventListener("loadedmetadata", () => {
+    video.onloadedmetadata = () => {
       seek.max = Math.floor(video.duration);
       duration.textContent = formatTime(video.duration);
-    });
+    };
 
-    /* UPDATE TIME */
-    video.addEventListener("timeupdate", () => {
+    video.ontimeupdate = () => {
       seek.value = Math.floor(video.currentTime);
       current.textContent = formatTime(video.currentTime);
-    });
+    };
 
-    /* SEEK */
-    seek.addEventListener("input", () => {
+    seek.oninput = () => {
       video.currentTime = seek.value;
       video.play();
-      playPauseBtn.textContent = "⏸️";
-    });
+    };
 
-    function formatTime(seconds) {
-      const min = Math.floor(seconds / 60);
-      const sec = Math.floor(seconds % 60).toString().padStart(2, "0");
-      return `${min}:${sec}`;
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60).toString().padStart(2, "0");
+      return `${m}:${s}`;
     }
+
+    checkOrientation();
   </script>
 
 </body>
